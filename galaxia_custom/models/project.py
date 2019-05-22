@@ -5,11 +5,27 @@
 from openerp import models, fields, api
 from openerp.addons.event_track_assistant._common import\
     _convert_to_local_date
+from __builtin__ import False
 
 
 class ProjectProject(models.Model):
     _inherit = 'project.project'
     _order = 'name'
+
+    @api.multi
+    def write(self, vals):
+#        actual_year = '2021'
+        actual_year = str(
+            int(fields.Date.from_string(fields.Date.today()).year))
+        found = False
+        if 'name' in vals:
+            for project in self:
+                if actual_year in project.name:
+                    found = True
+        if found:
+            vals.pop('name')
+        result = super(ProjectProject, self).write(vals)
+        return result
 
 
 class ProjectTask(models.Model):

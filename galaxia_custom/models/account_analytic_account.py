@@ -2,7 +2,7 @@
 # © 2016 Daniel Campos - AvanzOSC
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
-from openerp import fields, models
+from openerp import fields, models, api, exceptions, _
 
 
 class AccountAnalyticAccount(models.Model):
@@ -16,6 +16,45 @@ class AccountAnalyticAccount(models.Model):
     analytic_account_historical_ids = fields.One2many(
         comodel_name='account.analytic.account.historical',
         inverse_name='account_id', string='Account analytic historical')
+    recurring_invoice_incidence_ids = fields.One2many(
+        string='Recurring invoice incidences',
+        comodel_name='account.analytic.recurring.invoice.incidence',
+        inverse_name='analytic_account_id')
+
+    @api.multi
+    def write(self, vals):
+#        actual_year = '2021'
+        actual_year = str(
+            int(fields.Date.from_string(fields.Date.today()).year))
+        found = False
+        if 'name' in vals:
+            for account in self:
+                if actual_year in account.name:
+                    found = True
+        if found:
+            vals.pop('name')
+        result = super(AccountAnalyticAccount, self).write(vals)
+        return result
+
+    @api.multi
+    def _recurring_create_invoice(self, automatic=False):
+        result = super(
+            AccountAnalyticAccount, self.with_context(
+                from_automatic_recurring_invoice=True)). _recurring_create_invoice(automatic=automatic)
+        return result
+
+
+class AccountAnalyticRecurringInvoiceIncidence(models.Model):
+    _name = 'account.analytic.recurring.invoice.incidence'
+    _description = "Recurring invoices incidences"
+    _order = "from_date"
+
+    analytic_account_id = fields.Many2one(
+        string='Analytic account', comodel_name='account.analytic.account')
+    name = fields.Char(string='Description')
+    from_date = fields.Date(strin="From date")
+    to_date = fields.Date(strin="To date")
+    price = fields.Float('Price +/-')
 
 
 class AccountAnalyticAccountHistorical(models.Model):
